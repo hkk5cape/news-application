@@ -13,7 +13,7 @@ one command at a time. Commands below assume this repository is published as
 `Mickwen/news-application`; for a fork, use its HTTPS URL from GitHub's Code button.
 
 ```sh
-git clone https://github.com/Mickwen/news-application.git
+git clone https://github.com/hkk5cape/news-application.git
 cd news-application
 ```
 
@@ -215,5 +215,6 @@ This optional route has not been validated in the preparation environment.
 
 Do not upload `.env`, databases, virtual environments or caches.
 
-#   n e w s - a p p l i c a t i o n  
+#   n e w s - a p p l i c a t i o n 
+ 
  
