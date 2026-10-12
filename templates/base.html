@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}The Dispatch | Publisher newsroom{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'news/style.css' %}">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <a class="brand" href="{% url 'home' %}">THE DISPATCH<span>Your publishing company. Your newsroom.</span></a>
+    <nav aria-label="Main navigation">
+      <a href="{% url 'home' %}">Latest news</a>
+      {% if user.is_authenticated %}
+        {% if user.role != 'reader' %}
+          <a href="{% url 'publishers' %}">My publishers</a>
+          <a href="{% url 'workspace' %}">Newsroom</a>
+        {% endif %}
+        <a href="{% url 'newsletters' %}">Newsletters</a>
+        {% if user.role == 'reader' %}<a href="{% url 'subscriptions' %}">Subscriptions</a>{% endif %}
+        <span class="account-label">{{ user.username }} · {{ user.get_role_display }}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link">Log out</button></form>
+      {% else %}
+        <a href="{% url 'login' %}">Log in</a>
+        <a class="button" href="{% url 'register' %}">Create an account</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main id="main" tabindex="-1">
+    {% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>The Dispatch · Publishing and editorial management</footer>
+</body>
+</html>

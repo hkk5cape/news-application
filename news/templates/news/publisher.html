@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="heading"><h1>{{ company.name }}</h1>{% if manager %}<a class="button" href="{% url 'publisher_edit' company.pk %}">Edit publisher profile</a>{% endif %}</div>
+<p>{{ company.description|linebreaksbr }}</p>
+<div class="actions"><a href="{% url 'workspace' %}">Open newsroom</a><a href="{% url 'publishers' %}">All my publishers</a></div>
+<div class="grid">
+<section class="panel"><h2>Editors</h2><p>Editors manage the profile, employees and editorial review.</p><ul class="staff-list">{% for employee in company.editors.all %}<li><span>{{ employee.username }}</span>{% if manager %}<form method="post" action="{% url 'employee_remove' company.pk employee.pk %}">{% csrf_token %}<button class="danger">Remove {{ employee.username }}</button></form>{% endif %}</li>{% endfor %}</ul></section>
+<section class="panel"><h2>Journalists</h2><ul class="staff-list">{% for employee in company.journalists.all %}<li><span>{{ employee.username }}</span>{% if manager %}<form method="post" action="{% url 'employee_remove' company.pk employee.pk %}">{% csrf_token %}<button class="danger">Remove {{ employee.username }}</button></form>{% endif %}</li>{% empty %}<li>No journalists yet.</li>{% endfor %}</ul></section>
+</div>
+{% if manager %}<section class="panel narrow"><h2>Add an employee</h2><p>Ask your colleague to register as an editor or journalist, then enter their username. Editors receive permission to manage this publisher and its employees. Removing an employee preserves their account and existing stories.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button>Add employee</button></form></section>{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+flowchart TD
+    E[Editor] --> P[Create or edit own publisher]
+    E --> T[Add or remove company employees]
+    E --> A[Review, edit and approve articles]
+    J[Journalist] --> W[Write or maintain own articles]
+    J --> N[Create or edit newsletters]
+    E --> N
+    R[Reader] --> S[Subscribe to publishers or journalists]
+    R --> V[Read approved articles and newsletters]
+    A --> D[Email subscribers and record API approval]
+    U[New user] --> G[Register with a role]

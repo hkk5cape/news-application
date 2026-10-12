@@ -1,0 +1,44 @@
+classDiagram
+    class User {
+        username
+        email
+        role
+        subscribed_publishers
+        subscribed_journalists
+    }
+    class Publisher {
+        name
+        description
+        editors
+        journalists
+    }
+    class Article {
+        title
+        content
+        created_at
+        approved
+        revision
+    }
+    class Newsletter {
+        title
+        description
+        created_at
+        revision
+    }
+    class ApprovalEvent {
+        article_id_snapshot
+        revision
+        snapshot
+        api_logged
+        api_error
+    }
+    User "*" -- "*" Publisher : employees and subscriptions
+    User "1" --> "*" Article : author
+    Publisher "0..1" --> "*" Article : publisher
+    User "1" --> "*" Newsletter : author
+    Publisher "0..1" --> "*" Newsletter : publisher
+    Newsletter "*" -- "*" Article : curated articles
+    Article "0..1" --> "*" ApprovalEvent : approval history
+    ApprovalEvent "1" --> "*" ArticleEmail : deliveries
+    ApprovalEvent "1" --> "0..1" ApprovedLog : API receipt
+    Newsletter "1" --> "*" NewsletterEmail : revision deliveries

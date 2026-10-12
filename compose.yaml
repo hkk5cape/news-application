@@ -1,0 +1,32 @@
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: news_app
+      MARIADB_USER: news_user
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set a root password in .env}
+    volumes:
+      - news_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  web:
+    build: .
+    env_file: .env
+    environment:
+      NEWS_DB_ENGINE: mariadb
+      DB_HOST: db
+      DB_NAME: news_app
+      DB_USER: news_user
+      API_BASE_URL: http://127.0.0.1:8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000 --noreload"
+volumes:
+  news_db:

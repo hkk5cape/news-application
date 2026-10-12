@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="heading"><h1>My publishers</h1>{% if user.role == 'editor' %}<a class="button" href="{% url 'publisher_create' %}">Create publisher</a>{% endif %}</div>
+<p>Manage your publishing company and work with your editorial team.</p>
+<div class="grid">{% for company in publishers %}<section class="card"><h2><a href="{% url 'publisher' company.pk %}">{{ company.name }}</a></h2><p>{{ company.description }}</p></section>{% empty %}<p class="panel">{% if user.role == 'editor' %}Create your first publisher to start building your team.{% else %}Ask your editor to add your username to the company. You can also write independent articles from the Newsroom.{% endif %}</p>{% endfor %}</div>
+{% endblock %}
