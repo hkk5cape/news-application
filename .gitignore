@@ -1,8 +1,33 @@
+# Local secrets and virtual environments
 .env
+.env.*
+!.env.example
 venv/
 .venv/
+env/
+ENV/
+
+# Python and local runtime files
 __pycache__/
 *.py[cod]
 *.sqlite3
+*.sqlite3-journal
+*.log
+media/
 staticfiles/
 .ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Packaging and editor caches
+build/
+dist/
+*.egg-info/
+.idea/
+.vscode/
+*.swp
+
+# Sphinx caches only. Generated HTML is REQUIRED for this assignment.
+docs/.doctrees/
+docs/_build/doctrees/
