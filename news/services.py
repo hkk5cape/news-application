@@ -1,3 +1,5 @@
+"""Coordinate article approval, subscriber email, and authenticated API delivery."""
+
 from smtplib import SMTPException
 import requests
 from django.conf import settings
@@ -11,7 +13,22 @@ from .policies import can_edit, is_editor, subscribers
 
 @transaction.atomic
 def approve_article(article_id, editor):
-    """Commit approval and a durable event before any network calls."""
+    """Approve a story and create a durable delivery event in one transaction.
+
+    Args:
+        article_id (int): Primary key of the article to review.
+        editor (news.models.User): Editor requesting approval.
+
+    Returns:
+        news.models.ApprovalEvent: The existing or newly created revision event.
+
+    Raises:
+        django.core.exceptions.PermissionDenied: The editor cannot review this story
+            or attempts to approve their own work.
+        news.models.Article.DoesNotExist: The article identifier does not exist.
+
+    Network calls occur separately through dispatch_approval after commit.
+    """
     article = (
         Article.objects.select_for_update()
         .select_related("publisher", "author")
@@ -48,7 +65,18 @@ def approve_article(article_id, editor):
 
 
 def dispatch_approval(event):
-    """Called by the approval view after commit; retries only unfinished work."""
+    """Attempt unfinished email and API deliveries for an approval event.
+
+    Args:
+        event (news.models.ApprovalEvent): Committed approval snapshot to deliver.
+
+    Returns:
+        news.models.ApprovalEvent: Event with updated delivery status.
+
+    Recorded successful deliveries are skipped. Failed attempts retain a generic
+    error and can be retried. This does not guarantee exactly-once delivery if a
+    remote service accepts a request but the acknowledgement is lost.
+    """
     for delivery in event.deliveries.filter(sent=False):
         try:
             body = (
@@ -95,6 +123,18 @@ def dispatch_approval(event):
 
 
 def send_newsletter(newsletter, user):
+    """Email approved newsletter content to the current subscribers.
+
+    Args:
+        newsletter (news.models.Newsletter): Newsletter revision to distribute.
+        user (news.models.User): Account requesting the send.
+
+    Raises:
+        django.core.exceptions.PermissionDenied: The user cannot edit the newsletter.
+        django.core.exceptions.ValidationError: No approved articles are selected.
+
+    Previously successful deliveries for the same revision are skipped.
+    """
     if not can_edit(user, newsletter):
         raise PermissionDenied
     articles = list(newsletter.articles.filter(approved=True))
