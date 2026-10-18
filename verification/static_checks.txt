@@ -1,0 +1,5 @@
+PASS: generated HTML local links and assets exist
+PASS: Compose YAML parses; service wiring and healthchecks present (static only)
+PASS: tracked files exclude .env, virtual environments and databases
+PASS: documented application module ASTs unchanged after docstrings removed
+Docker build/runtime and MariaDB integration: NOT RUN (unavailable)

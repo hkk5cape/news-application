@@ -1,42 +1,47 @@
-# Validation — mentor feedback revision
+# Consolidation verification record
 
-Date: 11 October 2026. Python 3.12, Django 5.2.18, Django REST Framework 3.16.1.
+Prepared: 18 October 2026. This record supersedes the earlier validation document
+included in the input archive. It reports only checks executed for this revision.
 
-## Executed checks
+Environment: Python 3.12.14, Django 5.2.18, Django REST Framework 3.16.1,
+Sphinx 8.2.3. Tests used SQLite, not MariaDB.
 
-- 53 Django tests passed on SQLite, including 15 new publisher/onboarding tests.
-  Full output: `test_results.txt`. Existing registration test now checks deliberate
-  editor selection and rejects staff privilege escalation.
-- Fresh SQLite migrations and static-file collection succeeded.
-- `manage.py check` and `makemigrations --check --dry-run` passed; existing publisher
-  membership tables support the new workflows without a schema change.
-- Ruff code checks passed.
-- Chromium browser automation against the running Django server passed registration
-  for all three roles, company creation, automatic first-editor membership, adding
-  a journalist, subscribing a reader, creating a company draft, denying draft access
-  to the reader, approval and the real internal API POST, reading the published
-  story, curating/sending a newsletter, employee removal and last-editor protection.
-- Browser checks confirmed stylesheet HTTP 200, flex navigation, hidden skip link,
-  keyboard activation focusing main content, and no horizontal overflow at 390px.
-- Desktop (1440px), mobile (390px) and publisher-management screenshots were visually
-  reviewed. Navigation is spaced, the publisher home introduction is readable, and
-  the staff form is visible. Screenshots were internal inspection evidence, not
-  additional submission files.
+## Passed here
 
-Browser-check accounts existed only in the disposable local database. No user
-accounts, database files, passwords, virtual environment or collected static files
-are included in the release archive. Unit tests create isolated test fixtures.
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Django application tests | 57 passed, including 4 configuration tests | verification/django_tests.txt |
+| Django system check | No issues | verification/django_check.txt |
+| Migration drift check | No changes detected | verification/migration_drift.txt |
+| Ruff configured code checks | Passed | verification/ruff.txt |
+| Sphinx with warnings treated as errors | Passed | verification/sphinx.txt |
+| Fresh SQLite migrations | All migrations applied | Executed against a disposable local database |
+| Static-file collection | 164 files collected | Disposable generated files excluded from package |
+| Generated HTML links/assets | All local targets exist | Static link validation |
+| Compose YAML and service wiring | Parsed; database dependency and health checks present | Static inspection only |
+| Application behaviour preservation | Five documented modules have identical ASTs after removing docstrings | Compared against baseline b1eaa8d |
+| Git workflow | docs and container exist; five separate module commits; both branches merged | git log --graph --oneline --all |
 
-## Still to verify in the target environment
+The application tests cover publishing, role permissions, employee membership,
+subscriptions, approvals, API access and delivery behaviour. Configuration tests
+check password escaping, distinct generated secrets, refusal to overwrite an
+existing .env and rejection of invalid passwords. No real credentials or accounts
+are included in the deliverable.
 
-- MariaDB migrations and the suite against MariaDB (no server available here).
-- The full manual acceptance checklist in `MANUAL_TESTS.md` on your own installation.
-- Real SMTP delivery if you configure an external email provider. Console delivery
-  was checked; inbox delivery is not claimed.
-- Optional Docker Compose setup.
-- Actual public GitHub publication and a fresh clone of that public repository.
-- Removal of old snippets/archives from the course portal.
+## Required checks on the owner's machine
 
-The README uses the intended public repository `Mickwen/news-application`. This
-revision has not created or published that repository. Follow SUBMISSION_STEPS.md
-before presenting the repository URL as a working link.
+1. Build and run Docker Compose, including MariaDB migrations and web health.
+2. Follow the application's manual user walkthrough in that installation.
+3. Push main, docs and container to the existing public GitHub repository.
+4. Verify the updated public repository through a fresh clone.
+5. Upload the final project files and capstone.txt to the course dashboard.
+
+Docker is not installed and no MariaDB server is available in this preparation
+environment. Static Compose inspection does NOT establish that the image builds
+or the services run. The README and SUBMISSION_STEPS.md provide exact runtime
+commands. Public repository metadata was readable, but the connected GitHub
+account did not have push permission; no publication is claimed.
+
+Real SMTP inbox delivery depends on the owner's provider and was not tested.
+The application's default email backend prints messages to the console. No new
+browser screenshot or interactive user-journey check is claimed in this revision.

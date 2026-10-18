@@ -1,0 +1,96 @@
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+Found 57 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: messages, rest_framework, staticfiles
+  Apply all migrations: admin, auth, authtoken, contenttypes, news, sessions
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying news.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying authtoken.0001_initial... OK
+  Applying authtoken.0002_auto_20160226_1747... OK
+  Applying authtoken.0003_tokenproxy... OK
+  Applying authtoken.0004_alter_tokenproxy_options... OK
+  Applying sessions.0001_initial...test_add_editor_and_journalist_idempotently (news.test_publishers.PublisherWorkflowTests.test_add_editor_and_journalist_idempotently) ... ok
+test_anonymous_management_redirects_to_login (news.test_publishers.PublisherWorkflowTests.test_anonymous_management_redirects_to_login) ... ok
+test_edit_profile_and_duplicate_name_validation (news.test_publishers.PublisherWorkflowTests.test_edit_profile_and_duplicate_name_validation) ... ok
+test_editor_can_leave_when_another_active_editor_exists (news.test_publishers.PublisherWorkflowTests.test_editor_can_leave_when_another_active_editor_exists) ... ok
+test_editor_creates_company_and_becomes_member (news.test_publishers.PublisherWorkflowTests.test_editor_creates_company_and_becomes_member) ... ok
+test_employee_removal_revokes_company_content_access (news.test_publishers.PublisherWorkflowTests.test_employee_removal_revokes_company_content_access) ... ok
+test_home_has_stylesheet_and_business_navigation (news.test_publishers.PublisherWorkflowTests.test_home_has_stylesheet_and_business_navigation) ... ok
+test_invalid_registration_role_rejected (news.test_publishers.PublisherWorkflowTests.test_invalid_registration_role_rejected) ... ok
+test_journalist_can_view_own_company_but_not_manage_it (news.test_publishers.PublisherWorkflowTests.test_journalist_can_view_own_company_but_not_manage_it) ... ok
+test_last_editor_cannot_remove_self (news.test_publishers.PublisherWorkflowTests.test_last_editor_cannot_remove_self) ... ok
+test_membership_changes_require_csrf_token (news.test_publishers.PublisherWorkflowTests.test_membership_changes_require_csrf_token) ... ok
+test_reader_cannot_manage_publishers (news.test_publishers.PublisherWorkflowTests.test_reader_cannot_manage_publishers) ... ok
+test_reader_unknown_and_inactive_employees_rejected (news.test_publishers.PublisherWorkflowTests.test_reader_unknown_and_inactive_employees_rejected) ... ok
+test_registration_roles_and_no_admin_escalation (news.test_publishers.PublisherWorkflowTests.test_registration_roles_and_no_admin_escalation) ... ok
+test_unassigned_editor_cannot_manage_other_company (news.test_publishers.PublisherWorkflowTests.test_unassigned_editor_cannot_manage_other_company) ... ok
+test_all_roles_read_approved_only (news.tests.NewsTests.test_all_roles_read_approved_only) ... ok
+test_approval_dispatch_email_and_post (news.tests.NewsTests.test_approval_dispatch_email_and_post) ... ok
+test_approved_log_post_uses_trusted_snapshot (news.tests.NewsTests.test_approved_log_post_uses_trusted_snapshot) ... ok
+test_editor_and_reader_cannot_create_articles (news.tests.NewsTests.test_editor_and_reader_cannot_create_articles) ... ok
+test_editor_can_create_and_edit_newsletter (news.tests.NewsTests.test_editor_can_create_and_edit_newsletter) ... ok
+test_editor_can_delete (news.tests.NewsTests.test_editor_can_delete) ... ok
+test_editor_group_can_approve_independent_article (news.tests.NewsTests.test_editor_group_can_approve_independent_article) ... ok
+test_failures_remain_retryable (news.tests.NewsTests.test_failures_remain_retryable) ... ok
+test_invalid_publisher_and_fields_rejected (news.tests.NewsTests.test_invalid_publisher_and_fields_rejected) ... ok
+test_journalist_cannot_approve (news.tests.NewsTests.test_journalist_cannot_approve) ... ok
+test_journalist_cannot_hold_subscriptions (news.tests.NewsTests.test_journalist_cannot_hold_subscriptions) ... ok
+test_journalist_creates_article_with_approval_ignored (news.tests.NewsTests.test_journalist_creates_article_with_approval_ignored) ... ok
+test_missing_article_returns_404 (news.tests.NewsTests.test_missing_article_returns_404) ... ok
+test_newsletter_cannot_select_draft (news.tests.NewsTests.test_newsletter_cannot_select_draft) ... ok
+test_newsletter_create_view_and_read (news.tests.NewsTests.test_newsletter_create_view_and_read) ... ok
+test_newsletter_email_deduplicates (news.tests.NewsTests.test_newsletter_email_deduplicates) ... ok
+test_nonreader_subscribed_endpoint_denied (news.tests.NewsTests.test_nonreader_subscribed_endpoint_denied) ... ok
+test_only_journalists_are_subscription_targets (news.tests.NewsTests.test_only_journalists_are_subscription_targets) ... ok
+test_other_journalist_cannot_edit_newsletter (news.tests.NewsTests.test_other_journalist_cannot_edit_newsletter) ... ok
+test_other_journalist_cannot_update (news.tests.NewsTests.test_other_journalist_cannot_update) ... ok
+test_owner_update_resets_approval (news.tests.NewsTests.test_owner_update_resets_approval) ... ok
+test_reader_cannot_log_or_list_approval_events (news.tests.NewsTests.test_reader_cannot_log_or_list_approval_events) ... ok
+test_reader_cannot_mutate (news.tests.NewsTests.test_reader_cannot_mutate) ... ok
+test_reader_cannot_retrieve_draft (news.tests.NewsTests.test_reader_cannot_retrieve_draft) ... ok
+test_reapproval_is_idempotent (news.tests.NewsTests.test_reapproval_is_idempotent) ... ok
+test_registration_selects_role_without_admin_privileges (news.tests.NewsTests.test_registration_selects_role_without_admin_privileges) ... ok
+test_revoked_article_hidden_from_newsletter (news.tests.NewsTests.test_revoked_article_hidden_from_newsletter) ... ok
+test_role_groups_and_permissions (news.tests.NewsTests.test_role_groups_and_permissions) ... ok
+test_role_specific_fields_and_transition (news.tests.NewsTests.test_role_specific_fields_and_transition) ... ok
+test_subscribed_feed_isolated_and_no_draft_leak (news.tests.NewsTests.test_subscribed_feed_isolated_and_no_draft_leak) ... ok
+test_subscribed_journalist_and_deduplication (news.tests.NewsTests.test_subscribed_journalist_and_deduplication) ... ok
+test_subscribed_publisher_filter (news.tests.NewsTests.test_subscribed_publisher_filter) ... ok
+test_token_endpoint_and_wrong_password (news.tests.NewsTests.test_token_endpoint_and_wrong_password) ... ok
+test_unassigned_editor_cannot_approve (news.tests.NewsTests.test_unassigned_editor_cannot_approve) ... ok
+test_unauthenticated_access_denied (news.tests.NewsTests.test_unauthenticated_access_denied) ... ok
+test_user_serialization_hides_inapplicable_fields (news.tests.NewsTests.test_user_serialization_hides_inapplicable_fields) ... ok
+test_web_pages_and_subscription_save (news.tests.NewsTests.test_web_pages_and_subscription_save) ... ok
+test_docker_configuration_has_distinct_generated_secrets (news.test_configuration.ConfigurationTests.test_docker_configuration_has_distinct_generated_secrets) ... ok
+test_existing_configuration_is_never_overwritten (news.test_configuration.ConfigurationTests.test_existing_configuration_is_never_overwritten) ... ok
+test_invalid_password_does_not_create_a_file (news.test_configuration.ConfigurationTests.test_invalid_password_does_not_create_a_file) ... ok
+test_native_password_round_trips_special_characters (news.test_configuration.ConfigurationTests.test_native_password_round_trips_special_characters) ... ok
+test_real_self_post_reaches_approved_endpoint (news.tests.RealHTTPApprovalTests.test_real_self_post_reaches_approved_endpoint) ... ok
+
+----------------------------------------------------------------------
+Ran 57 tests in 1.299s
+
+OK
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+ OK
+System check identified no issues (0 silenced).

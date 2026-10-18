@@ -1,220 +1,257 @@
-# The Dispatch — News Application
+# The Dispatch - News Application
 
-A publishing workspace for companies, editors and journalists. Editors create a
-publisher profile, build their team, review articles and manage newsletters.
-Readers can follow publishers and journalists and read approved reporting.
-Normal use does not require Django Admin or a superuser.
+A Django publishing workspace for companies, editors and journalists. Editors
+create a publisher, add employees and approve articles. Readers subscribe to
+publishers and journalists. Normal application use does not require Django Admin.
 
-## 1\. Download the project from GitHub
+## 1. Clone the project
 
-Prerequisites: Git, Python 3.12 and a running MariaDB server. Install these before
-continuing. Open **PowerShell** on Windows or **Terminal** on macOS/Linux. Enter
-one command at a time. Commands below assume this repository is published as
-`Mickwen/news-application`; for a fork, use its HTTPS URL from GitHub's Code button.
+Install Git first, then open PowerShell on Windows or a terminal on macOS/Linux:
 
 ```sh
 git clone https://github.com/hkk5cape/news-application.git
 cd news-application
 ```
 
-You are now inside the project folder. It contains `manage.py`, `requirements.txt`
-and this README. Keep this terminal in that folder for the remaining steps.
-If Git reports “repository not found”, check the repository URL and that it is public.
+Keep the terminal in this folder, beside `manage.py`. Choose either the virtual
+environment route (sections 2-4) or Docker (section 5).
 
-## 2\. Create a virtual environment and install dependencies
+## 2. Virtual environment and dependencies
 
-A virtual environment keeps this project's Python packages separate.
+This route needs Python 3.12 and a running MariaDB server.
 
 Windows PowerShell:
 
 ```powershell
 py -3.12 -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```
 
-If PowerShell prevents activation, use `.\\.venv\\Scripts\\python.exe` instead of
-`python` in subsequent commands. You do not need to change machine-wide policy.
+If activation is blocked, use `.\.venv\Scripts\python.exe` instead of `python`
+for each remaining Python command. No machine-wide policy change is needed.
 
 macOS/Linux:
 
 ```sh
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-If `mysqlclient` cannot build, install your operating system's compiler, Python
-development headers, MariaDB client development libraries and pkg-config, then
-retry installation. On Debian/Ubuntu these packages are `build-essential`,
-`python3-dev`, `default-libmysqlclient-dev` and `pkg-config`.
+If mysqlclient needs compiling, install your platform's compiler, Python headers,
+MariaDB client development libraries and pkg-config. On Debian/Ubuntu:
 
-## 3\. Create the MariaDB database
-
-Open the MariaDB command-line client with your database administrator account.
-This is database setup, not the application's Django Admin page. Run the following
-SQL, replacing `CHOOSE\_A\_LOCAL\_PASSWORD` with a password you choose. Keep that
-password for the next step; do not use the placeholder literally.
-
-```sql
-CREATE DATABASE news\_app CHARACTER SET utf8mb4 COLLATE utf8mb4\_unicode\_ci;
-CREATE USER 'news\_user'@'localhost' IDENTIFIED BY 'CHOOSE\_A\_LOCAL\_PASSWORD';
-GRANT ALL PRIVILEGES ON news\_app.\* TO 'news\_user'@'localhost';
+```sh
+sudo apt-get install build-essential python3-dev default-libmysqlclient-dev pkg-config
 ```
 
-Exit the database client and return to your project terminal. Run:
+## 3. Create the database and private configuration
+
+Open the MariaDB client as a database administrator. Choose a local password and
+replace `CHOOSE_A_LOCAL_PASSWORD` below. These commands are SQL, not PowerShell:
+
+```sql
+CREATE DATABASE news_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'news_user'@'localhost' IDENTIFIED BY 'CHOOSE_A_LOCAL_PASSWORD';
+GRANT ALL PRIVILEGES ON news_app.* TO 'news_user'@'localhost';
+```
+
+Exit the database client. In the project terminal run:
 
 ```sh
 python scripts/configure.py
 ```
 
-Enter the database password when prompted. It will not be displayed. The script
-creates a local `.env` file and generates a random Django secret key. It does not
-create users or overwrite existing configuration. For a remote database, edit
-`DB\_HOST`, `DB\_PORT` and the other database values in `.env`.
+Enter the password you chose. This script creates `.env` with a random Django
+secret key; it creates no mock accounts and refuses to overwrite existing
+configuration. `.env.example` describes the variable names. Edit `.env` if your
+database host or port differs. Never publish `.env`, passwords or API tokens.
 
-## 4\. Initialise and start the application
+## 4. Start the application with your virtual environment
 
 ```sh
 python manage.py migrate
-python manage.py collectstatic --noinput
+python manage.py check
 python manage.py runserver
 ```
 
-Migrations create the database tables. A post-migration hook creates the Reader,
-Editor and Journalist groups and assigns permissions automatically. **No mock
-users are loaded.** Open **http://127.0.0.1:8000/** in your browser. Keep the terminal
-open while using the application. Press Ctrl+C in it to stop the server.
+Open **http://127.0.0.1:8000/**. Keep the terminal running; Ctrl+C stops the server.
+Migrations initialise the role groups and permissions, not demonstration users.
+With `DJANGO_DEBUG=true`, Django serves CSS from `news/static/`. For a local style
+problem, confirm `/static/news/style.css` loads and refresh the browser.
 
-The development server serves the application's CSS with `DJANGO\_DEBUG=true`.
-If the page appears unstyled, check that `/static/news/style.css` loads, keep the
-`news/static/` folder intact and refresh the browser. For production, a web server
-must serve `STATIC\_ROOT` after `collectstatic`; this README describes local setup.
+## 5. Build and run with Docker Compose
 
-To start again later, enter the project folder, activate your virtual environment,
-and run `python manage.py runserver`. A separate terminal is needed for other commands.
+Docker Desktop must be running with Linux containers and Docker Compose v2.
+No MariaDB installation on the host is needed for this route.
 
-## 5\. Create your publishing company — no Admin panel
-
-1. Click **Create an account**. Enter your username, email, a strong password and
-select **Editor**. You will be taken to **My publishers**.
-2. Click **Create publisher**. Enter your company name and description and save.
-You are automatically added as its first editor.
-3. Ask colleagues to register their own accounts as **Journalist** or **Editor**.
-They choose their own passwords. You do not need to create accounts for them.
-4. In **My publishers**, open your company. Under **Add an employee**, enter a
-colleague's exact username and click **Add employee**. Repeat for your team.
-Only registered, active editors and journalists can be added. Adding an editor
-allows them to manage this company's profile, employees and editorial review.
-5. Use **Edit publisher profile** to change the company description or name.
-Use the employee's **Remove** button to remove their membership. Accounts and
-stories are retained. The last active editor cannot be removed until another
-active editor has been added. An editor cannot manage an unrelated company.
-
-## 6\. Write, review and publish
-
-1. A journalist logs in and opens **Newsroom → Write article**. Enter title and
-content, select the publisher and save. Only their employers appear in the
-publisher list. Leaving it blank creates independent reporting.
-2. An editor for that company opens **Newsroom**, selects the draft, reviews it,
-makes any needed edits, and clicks **Approve / retry delivery**. Editors can
-also review independent articles. Drafts are hidden from readers.
-3. The approved article appears under **Latest news**. Editing it returns it to
-draft status until another approval. The normal pages provide edit and delete
-actions with permission checks; deletion has a confirmation page.
-4. Readers register with the **Reader** role, open **Subscriptions**, choose
-publishers/journalists and save. They can select **My subscriptions** on home.
-5. On approval, the service emails subscribers and uses Python Requests to POST
-to this project's `/api/approved/` endpoint. This implements the brief's
-**Option 2 (without approval signals)**. Role/group setup uses Django signals.
-Delivery failures remain retryable without duplicate successful deliveries.
-6. Editors and journalists open **Newsletters → Curate newsletter**, select
-approved articles, save and use **Send / retry newsletter email**. Readers can view them.
-
-The default email backend prints messages in the server terminal, so local setup
-needs no email service. To deliver real mail, configure `EMAIL\_BACKEND` as
-`django.core.mail.backends.smtp.EmailBackend` and set `EMAIL\_HOST`, `EMAIL\_PORT`,
-`EMAIL\_HOST\_USER`, `EMAIL\_HOST\_PASSWORD`, `EMAIL\_USE\_TLS` and `DEFAULT\_FROM\_EMAIL`
-in `.env`. Verify delivery with your provider. Keep credentials private.
-
-Django Admin is optional maintenance only. A system maintainer may run
-`python manage.py createsuperuser` for that purpose. None of steps 5–6 requires it.
-
-## API reference
-
-POST `/api/token/` with `username` and `password` obtains a token. Send the header
-`Authorization: Token YOUR\_TOKEN` on API requests. Tokens are private credentials.
-
-|Method and route|Purpose|
-|-|-|
-|GET `/api/articles/`|List approved articles|
-|GET `/api/articles/subscribed/`|Reader's subscribed publishers/journalists|
-|GET `/api/articles/<id>/`|Read an accessible article|
-|POST `/api/articles/`|Journalist creates title, content, optional publisher ID|
-|PUT/PATCH `/api/articles/<id>/`|Author or permitted editor updates article|
-|DELETE `/api/articles/<id>/`|Author or permitted editor deletes article|
-|POST `/api/articles/<id>/approve/`|Permitted editor approves article|
-|POST `/api/approved/`|Record the approving editor's trusted event ID|
-|GET `/api/publishers/`|List publishers|
-|GET/POST `/api/newsletters/`|List/create newsletters according to role|
-|GET/PUT/PATCH/DELETE `/api/newsletters/<id>/`|Newsletter operations by permission|
-|GET `/api/me/`|Current user's role and applicable fields|
-
-Publisher profile and employee management are provided through the web pages.
-Tests in `news/tests.py` include API payload examples and access-control checks.
-
-## Tests
-
-In another activated project terminal:
+If Python is installed, create the container configuration:
 
 ```sh
-python manage.py test news --verbosity 2
+python scripts/configure.py --docker
 ```
 
-For MariaDB tests, your database administrator must grant the app user privileges
-on the separate test database before running the command:
+For Docker-only setup without host Python, use this instead in **PowerShell**:
 
-```sql
-GRANT ALL PRIVILEGES ON test\_news\_app.\* TO 'news\_user'@'localhost';
+```powershell
+docker run --rm --mount "type=bind,source=$($PWD.Path),target=/work" -w /work python:3.12-slim-bookworm python scripts/configure.py --docker
 ```
 
-For portable SQLite verification without a MariaDB server, install
-`requirements-test.txt` and set `NEWS\_DB\_ENGINE=sqlite` only for that test run:
+On **macOS/Linux**, the equivalent Docker-only command is:
 
-PowerShell:
+```sh
+docker run --rm --mount "type=bind,source=$(pwd),target=/work" -w /work python:3.12-slim-bookworm python scripts/configure.py --docker
+```
+
+The script generates three separate random secrets: the Django key, application
+database password and MariaDB root password. It does not print them or create
+users. If `.env` already exists, edit it rather than overwriting it; ensure it
+contains `DB_PASSWORD` and `MARIADB_ROOT_PASSWORD`.
+
+Build and start:
+
+```sh
+docker compose config --quiet
+docker compose up --build -d --wait --wait-timeout 240
+docker compose ps
+docker compose exec web python manage.py check
+docker compose exec web python manage.py makemigrations --check --dry-run
+```
+
+Both services should be healthy. Compose waits for MariaDB, runs migrations and
+starts Django. Open **http://127.0.0.1:8000/**. If startup fails, inspect:
+
+```sh
+docker compose logs --tail 100 db web
+```
+
+To observe console email, use `docker compose logs -f web`. Leave logs with Ctrl+C.
+Stop the containers with `docker compose down`; the named database volume stays.
+Changing `.env` later does not change passwords already stored in an existing
+MariaDB volume. Use the existing credentials or deliberately create a separate
+fresh installation. Do not delete a volume containing data you need.
+
+The image runs as an unprivileged user and excludes local secrets, Git history
+and virtual environments. This setup uses Django's development server for local
+coursework; an Internet production deployment needs a production application
+server, static-file serving, HTTPS and deployment-specific settings.
+
+**Validation limit:** Docker and MariaDB runtime checks could not be executed in
+the preparation environment. Run the commands above and the user walkthrough
+before requesting review. SQLite tests do not substitute for that Docker check.
+
+## 6. Create a publisher and its team
+
+1. Click **Create an account** and register as **Editor** with your own password.
+2. In **My publishers**, choose **Create publisher** and save the company profile.
+   You automatically become its first editor.
+3. Have colleagues register as **Journalist** or **Editor** with their own accounts.
+4. Open your company and use **Add an employee** with a colleague's exact username.
+5. Use **Edit publisher profile** and employee **Remove** actions as needed.
+   The last active editor cannot be removed. Access is restricted to the company.
+
+## 7. Write, review, subscribe and send newsletters
+
+1. As a journalist, open **Newsroom -> Write article**, select your employer and
+   save a draft. Leaving publisher blank creates independent reporting.
+2. As an assigned editor, review it and choose **Approve / retry delivery**.
+   Authors cannot approve their own articles. Drafts are hidden from readers.
+3. The story appears in **Latest news**. Editing it returns it to draft status.
+4. Readers register with the **Reader** role and use **Subscriptions** to follow
+   publishers/journalists. **My subscriptions** filters their feed.
+5. Editors and journalists can curate approved stories under **Newsletters** and
+   use **Send / retry newsletter email**.
+6. Approval emails subscribers and uses Requests to POST the approval event to
+   `/api/approved/`. Retries skip deliveries already recorded as successful.
+   Remote acceptance with a lost acknowledgement can still cause duplicates.
+
+Use separate browser profiles or log out between roles. The default email backend
+prints mail in the server terminal or container logs. Real inbox delivery requires
+SMTP configuration in `.env`: `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`,
+`EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS` and `DEFAULT_FROM_EMAIL`.
+Never commit those credentials. No normal workflow requires a superuser;
+`createsuperuser` and Django Admin are optional maintenance tools only.
+
+## 8. Sphinx documentation
+
+Open **docs/_build/html/index.html** directly in a browser. The generated HTML is
+included in Git as specifically required by this assignment. Source guides and
+Django-aware autodoc configuration are in `docs/`.
+
+To rebuild from the project root in an activated environment:
+
+```sh
+python -m pip install -r requirements-docs.txt
+python -m sphinx -W --keep-going -b html -d docs/.doctrees docs docs/_build/html
+```
+
+Autodoc initialises `news_project.settings` using SQLite for inspection. No
+MariaDB connection or application accounts are needed to generate documentation.
+
+## 9. Run tests
+
+Portable verification without a MariaDB server, in PowerShell:
 
 ```powershell
 python -m pip install -r requirements-test.txt
-$env:NEWS\_DB\_ENGINE="sqlite"
+$env:NEWS_DB_ENGINE = "sqlite"
+python manage.py check
+python manage.py makemigrations --check --dry-run
 python manage.py test news --verbosity 2
-Remove-Item Env:NEWS\_DB\_ENGINE
+Remove-Item Env:NEWS_DB_ENGINE
 ```
 
 macOS/Linux:
 
 ```sh
 python -m pip install -r requirements-test.txt
-NEWS\_DB\_ENGINE=sqlite python manage.py test news --verbosity 2
+NEWS_DB_ENGINE=sqlite python manage.py check
+NEWS_DB_ENGINE=sqlite python manage.py test news --verbosity 2
 ```
 
-See `docs/VALIDATION.md` for executed checks and remaining environment checks.
-Follow `docs/MANUAL\_TESTS.md` to verify the complete user journey on your computer.
+For tests against MariaDB, your database administrator must grant the application
+user access to the separate `test_news_app` database before running the suite:
 
-## Project files
+```sql
+GRANT ALL PRIVILEGES ON test_news_app.* TO 'news_user'@'localhost';
+```
 
-* `news/`: models, forms, views, permissions, services, API, migrations and tests.
-* `news/templates/` and `templates/`: application pages and shared layout.
-* `news/static/news/style.css`: responsive styling and keyboard focus handling.
-* `news\_project/`: settings and main URL configuration.
-* `Planning/design.md`: requirements, database design and diagrams.
-* `scripts/configure.py`: local configuration setup; creates no user accounts.
-* `requirements\*.txt`, `.env.example`: dependencies and configuration reference.
-* `Dockerfile`, `compose.yaml`: optional container setup. Copy `.env.example` to
-`.env`, choose real local secrets/passwords, then run `docker compose up --build`.
-This optional route has not been validated in the preparation environment.
+Tests create temporary fixtures in their test database. No mock users are shipped.
+See `docs/VALIDATION.md` for executed checks and `docs/MANUAL_TESTS.md` for the
+complete acceptance walkthrough.
 
-Do not upload `.env`, databases, virtual environments or caches.
+## 10. API and project layout
 
-#   n e w s - a p p l i c a t i o n 
- 
- 
+POST `/api/token/` with a username and password to obtain a token. Use the private
+header `Authorization: Token YOUR_TOKEN` for API calls. The generated reference
+lists article, approval, publisher, newsletter and profile endpoints.
+
+| Location | Purpose |
+| --- | --- |
+| `news/` | Models, forms, views, policies, services, API and tests |
+| `news/migrations/` | Database schema; keep these files in Git |
+| `templates/`, `news/templates/` | Application pages |
+| `news/static/` | Application styling |
+| `news_project/` | Django settings and project URLs |
+| `Planning/` | Existing design and Mermaid diagram sources |
+| `docs/` | Sphinx sources, generated HTML and validation records |
+| `scripts/configure.py` | Private configuration generation |
+| `Dockerfile`, `compose.yaml` | Container application and MariaDB service |
+| `SUBMISSION_STEPS.md`, `capstone.txt` | Publication and course submission |
+
+## 11. Consolidation Git history
+
+The original history is retained. The `docs` branch has separate documentation
+commits for models, policies, forms, services and views plus the Sphinx build.
+The `container` branch starts independently from `main`; both are merged into
+`main` with merge commits. The README is committed after those merges.
+
+```sh
+git branch
+git log --graph --oneline --all
+```
+
+The prepared archive includes `.git` so the branches and commits survive
+extraction. Do not run `git init` again or upload individual files through the
+GitHub web interface to replace this history. Follow **SUBMISSION_STEPS.md**.

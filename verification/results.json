@@ -1,0 +1,17 @@
+{
+  "django_check": {
+    "exit_code": 0
+  },
+  "migration_drift": {
+    "exit_code": 0
+  },
+  "django_tests": {
+    "exit_code": 0
+  },
+  "ruff": {
+    "exit_code": 0
+  },
+  "sphinx": {
+    "exit_code": 0
+  }
+}

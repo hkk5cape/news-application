@@ -1,0 +1,47 @@
+Running Sphinx v8.2.3
+loading translations [en]... done
+building [mo]: targets for 0 po files that are out of date
+writing output... 
+building [html]: targets for 6 source files that are out of date
+updating environment: [new config] 6 added, 0 changed, 0 removed
+reading sources... [ 17%] development
+reading sources... [ 33%] index
+reading sources... [ 50%] installation
+reading sources... [ 67%] reference
+reading sources... [ 83%] submission
+reading sources... [100%] usage
+
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... done
+preparing documents... done
+copying assets... 
+copying static files... 
+Writing evaluated template result to <project-root>/docs/_build/html/_static/basic.css
+Writing evaluated template result to <project-root>/docs/_build/html/_static/documentation_options.js
+Writing evaluated template result to <project-root>/docs/_build/html/_static/language_data.js
+Writing evaluated template result to <project-root>/docs/_build/html/_static/alabaster.css
+copying static files: done
+copying extra files... 
+copying extra files: done
+copying assets: done
+writing output... [ 17%] development
+writing output... [ 33%] index
+writing output... [ 50%] installation
+writing output... [ 67%] reference
+writing output... [ 83%] submission
+writing output... [100%] usage
+
+generating indices... genindex py-modindex done
+highlighting module code... [ 20%] news.forms
+highlighting module code... [ 40%] news.models
+highlighting module code... [ 60%] news.policies
+highlighting module code... [ 80%] news.services
+highlighting module code... [100%] news.views
+
+writing additional pages... search done
+dumping search index in English (code: en)... done
+dumping object inventory... done
+build succeeded.
+
+The HTML pages are in docs/_build/html.
