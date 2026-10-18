@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>news.views &#8212; The Dispatch - News Application</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for news.views</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Web workflows for publishing companies, editorial review, and readers."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib</span><span class="w"> </span><span class="kn">import</span> <span class="n">messages</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">login</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">PermissionDenied</span><span class="p">,</span> <span class="n">ValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Q</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.shortcuts</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_object_or_404</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.views.decorators.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">require_POST</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.forms</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ArticleForm</span><span class="p">,</span>
+    <span class="n">NewsletterForm</span><span class="p">,</span>
+    <span class="n">RegistrationForm</span><span class="p">,</span>
+    <span class="n">SubscriptionForm</span><span class="p">,</span>
+    <span class="n">PublisherForm</span><span class="p">,</span>
+    <span class="n">EmployeeForm</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Article</span><span class="p">,</span> <span class="n">Newsletter</span><span class="p">,</span> <span class="n">Publisher</span><span class="p">,</span> <span class="n">User</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">transaction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.policies</span><span class="w"> </span><span class="kn">import</span> <span class="n">can_edit</span><span class="p">,</span> <span class="n">is_editor</span><span class="p">,</span> <span class="n">subscribed_articles</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.services</span><span class="w"> </span><span class="kn">import</span> <span class="n">approve_article</span><span class="p">,</span> <span class="n">dispatch_approval</span><span class="p">,</span> <span class="n">send_newsletter</span>
+
+
+<div class="viewcode-block" id="home">
+<a class="viewcode-back" href="../../reference.html#news.views.home">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">home</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Render approved reporting or the signed-in reader's subscription feed."""</span>
+    <span class="n">articles</span> <span class="o">=</span> <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">approved</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">select_related</span><span class="p">(</span>
+        <span class="s2">"author"</span><span class="p">,</span> <span class="s2">"publisher"</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"feed"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"subscribed"</span><span class="p">:</span>
+        <span class="n">articles</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">subscribed_articles</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span>
+            <span class="k">else</span> <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">none</span><span class="p">()</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"news/home.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"articles"</span><span class="p">:</span> <span class="n">articles</span><span class="p">})</span></div>
+
+
+
+<div class="viewcode-block" id="register">
+<a class="viewcode-back" href="../../reference.html#news.views.register">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Register an account and redirect according to its selected role."""</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">RegistrationForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">login</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span>
+            <span class="s2">"publishers"</span>
+            <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"editor"</span>
+            <span class="k">else</span> <span class="s2">"workspace"</span>
+            <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"journalist"</span>
+            <span class="k">else</span> <span class="s2">"home"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span> <span class="s2">"news/form.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Create your account"</span><span class="p">}</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">article_detail</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+    <span class="n">article</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Article</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">article</span><span class="o">.</span><span class="n">approved</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">article</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/article.html"</span><span class="p">,</span>
+        <span class="p">{</span>
+            <span class="s2">"article"</span><span class="p">:</span> <span class="n">article</span><span class="p">,</span>
+            <span class="s2">"editable"</span><span class="p">:</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">article</span><span class="p">),</span>
+            <span class="s2">"editor"</span><span class="p">:</span> <span class="n">is_editor</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span> <span class="ow">and</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">article</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="workspace">
+<a class="viewcode-back" href="../../reference.html#news.views.workspace">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">workspace</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Show only drafts and stories the editor or journalist can manage."""</span>
+    <span class="k">if</span> <span class="n">is_editor</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">):</span>
+        <span class="n">articles</span> <span class="o">=</span> <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="n">Q</span><span class="p">(</span><span class="n">publisher</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">|</span> <span class="n">Q</span><span class="p">(</span><span class="n">publisher__editors</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"journalist"</span><span class="p">:</span>
+        <span class="n">articles</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">Q</span><span class="p">(</span><span class="n">publisher</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">|</span> <span class="n">Q</span><span class="p">(</span><span class="n">publisher__journalists</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">))</span>
+            <span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/workspace.html"</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"articles"</span><span class="p">:</span> <span class="n">articles</span><span class="p">,</span> <span class="s2">"journalist"</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"journalist"</span><span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="article_edit">
+<a class="viewcode-back" href="../../reference.html#news.views.article_edit">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">article_edit</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Validate an authorised draft update and reset its approval status."""</span>
+    <span class="n">article</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Article</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span> <span class="k">if</span> <span class="n">pk</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">article</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">article</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span>
+            <span class="s2">"news.change_article"</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s2">"journalist"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span>
+        <span class="s2">"news.add_article"</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">ArticleForm</span><span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">instance</span><span class="o">=</span><span class="n">article</span><span class="p">,</span>
+        <span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">article</span><span class="p">:</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">author</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">revision</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">approved</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">approved_by</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"workspace"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/form.html"</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Edit article"</span> <span class="k">if</span> <span class="n">article</span> <span class="k">else</span> <span class="s2">"Write article"</span><span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">article_delete</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Article</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span>
+        <span class="s2">"news.delete_article"</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"workspace"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"news/delete.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">item</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="article_approve">
+<a class="viewcode-back" href="../../reference.html#news.views.article_approve">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="nd">@require_POST</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">article_approve</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Approve an authorised story and attempt unfinished deliveries."""</span>
+    <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Article</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s2">"news.approve_article"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">event</span> <span class="o">=</span> <span class="n">approve_article</span><span class="p">(</span><span class="n">pk</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+    <span class="n">dispatch_approval</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">"Approved. API logged: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">api_logged</span><span class="si">}</span><span class="s2">. Pending emails: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">deliveries</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">sent</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="si">}</span><span class="s2">. Approve/retry repeats only unfinished deliveries."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"article"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span></div>
+
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">subscriptions</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s2">"reader"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">SubscriptionForm</span><span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"Subscriptions updated."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"home"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/form.html"</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Follow publishers and journalists"</span><span class="p">},</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">newsletters</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/newsletters.html"</span><span class="p">,</span>
+        <span class="p">{</span>
+            <span class="s2">"newsletters"</span><span class="p">:</span> <span class="n">Newsletter</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+            <span class="s2">"creator"</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="s2">"news.add_newsletter"</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">newsletter_detail</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Newsletter</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/newsletter.html"</span><span class="p">,</span>
+        <span class="p">{</span>
+            <span class="s2">"item"</span><span class="p">:</span> <span class="n">item</span><span class="p">,</span>
+            <span class="s2">"articles"</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">articles</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">approved</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="s2">"editable"</span><span class="p">:</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">newsletter_edit</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Newsletter</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span> <span class="k">if</span> <span class="n">pk</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">permission</span> <span class="o">=</span> <span class="s2">"news.change_newsletter"</span> <span class="k">if</span> <span class="n">item</span> <span class="k">else</span> <span class="s2">"news.add_newsletter"</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span><span class="n">permission</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="n">item</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">NewsletterForm</span><span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">instance</span><span class="o">=</span><span class="n">item</span><span class="p">,</span>
+        <span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">newsletter</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span><span class="p">:</span>
+            <span class="n">newsletter</span><span class="o">.</span><span class="n">author</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">newsletter</span><span class="o">.</span><span class="n">revision</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">newsletter</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">save_m2m</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"newsletter"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">newsletter</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span> <span class="s2">"news/form.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Curate a newsletter"</span><span class="p">}</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">newsletter_delete</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Newsletter</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">can_edit</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">has_perm</span><span class="p">(</span>
+        <span class="s2">"news.delete_newsletter"</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"newsletters"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"news/delete.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">item</span><span class="p">})</span>
+
+
+<span class="nd">@login_required</span>
+<span class="nd">@require_POST</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">newsletter_send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Newsletter</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">send_newsletter</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="s2">"Newsletter delivery attempted. Previously sent recipients were skipped."</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"newsletter"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+
+
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">publishers</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"editor"</span><span class="p">:</span>
+        <span class="n">companies</span> <span class="o">=</span> <span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">editors</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"journalist"</span><span class="p">:</span>
+        <span class="n">companies</span> <span class="o">=</span> <span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">journalists</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"news/publishers.html"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"publishers"</span><span class="p">:</span> <span class="n">companies</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="publisher_edit">
+<a class="viewcode-back" href="../../reference.html#news.views.publisher_edit">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">publisher_edit</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Create or update a company and retain the creator as an editor."""</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s2">"editor"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">company</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Publisher</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span> <span class="k">if</span> <span class="n">pk</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">company</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">PublisherForm</span><span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">company</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="ow">and</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="k">with</span> <span class="n">transaction</span><span class="o">.</span><span class="n">atomic</span><span class="p">():</span>
+            <span class="n">company</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span> <span class="s2">"Publisher profile saved. Manage your employees below."</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"publisher"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">company</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/form.html"</span><span class="p">,</span>
+        <span class="p">{</span>
+            <span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+            <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Edit publisher"</span> <span class="k">if</span> <span class="n">company</span> <span class="k">else</span> <span class="s2">"Create your publisher"</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="publisher_detail">
+<a class="viewcode-back" href="../../reference.html#news.views.publisher_detail">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">publisher_detail</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Show a company and let its editors add registered employees."""</span>
+    <span class="n">company</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Publisher</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+    <span class="n">manager</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"editor"</span>
+        <span class="ow">and</span> <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">member</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"journalist"</span>
+        <span class="ow">and</span> <span class="n">company</span><span class="o">.</span><span class="n">journalists</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">manager</span> <span class="ow">or</span> <span class="n">member</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PermissionDenied</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">EmployeeForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">manager</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PermissionDenied</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">employee</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">employee</span>
+            <span class="n">membership</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">company</span><span class="o">.</span><span class="n">editors</span> <span class="k">if</span> <span class="n">employee</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"editor"</span> <span class="k">else</span> <span class="n">company</span><span class="o">.</span><span class="n">journalists</span>
+            <span class="p">)</span>
+            <span class="n">membership</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">employee</span><span class="p">)</span>
+            <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"Employee added to this publisher."</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"publisher"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">company</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"news/publisher.html"</span><span class="p">,</span>
+        <span class="p">{</span><span class="s2">"company"</span><span class="p">:</span> <span class="n">company</span><span class="p">,</span> <span class="s2">"manager"</span><span class="p">:</span> <span class="n">manager</span><span class="p">,</span> <span class="s2">"form"</span><span class="p">:</span> <span class="n">form</span><span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="employee_remove">
+<a class="viewcode-back" href="../../reference.html#news.views.employee_remove">[docs]</a>
+<span class="nd">@login_required</span>
+<span class="nd">@require_POST</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">employee_remove</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">pk</span><span class="p">,</span> <span class="n">user_pk</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Remove company membership while preserving the last active editor."""</span>
+    <span class="k">with</span> <span class="n">transaction</span><span class="o">.</span><span class="n">atomic</span><span class="p">():</span>
+        <span class="n">company</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">select_for_update</span><span class="p">(),</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">!=</span> <span class="s2">"editor"</span>
+            <span class="ow">or</span> <span class="ow">not</span> <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PermissionDenied</span>
+        <span class="n">employee</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">User</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">user_pk</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">employee</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">"editor"</span><span class="p">,</span> <span class="n">is_active</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">exclude</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">employee</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">count</span><span class="p">()</span>
+                <span class="o">==</span> <span class="mi">0</span>
+            <span class="p">):</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="n">request</span><span class="p">,</span>
+                    <span class="s2">"Keep at least one active editor. Add another editor before removing this one."</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"publisher"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+            <span class="n">company</span><span class="o">.</span><span class="n">editors</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">employee</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">company</span><span class="o">.</span><span class="n">journalists</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">employee</span><span class="o">.</span><span class="n">pk</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">company</span><span class="o">.</span><span class="n">journalists</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">employee</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">Http404</span>
+
+            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s2">"Employee is not part of this publisher."</span><span class="p">)</span>
+    <span class="n">messages</span><span class="o">.</span><span class="n">success</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="s2">"Employee removed from this publisher. Their account and published content are retained."</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">redirect</span><span class="p">(</span><span class="s2">"publisher"</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">pk</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">employee</span><span class="o">.</span><span class="n">pk</span> <span class="o">!=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span>
+        <span class="k">else</span> <span class="n">redirect</span><span class="p">(</span><span class="s2">"publishers"</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">The Dispatch - News Application</a></h1>
+
+
+
+<p class="blurb">Publishing, editorial review and subscriptions</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Project guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">User walkthrough</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Python and HTTP reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../development.html">Development and verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../submission.html">Submission checklist</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, News Application Contributors.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

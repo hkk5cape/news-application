@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>User walkthrough &#8212; The Dispatch - News Application</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Python and HTTP reference" href="reference.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="user-walkthrough">
+<h1>User walkthrough<a class="headerlink" href="#user-walkthrough" title="Link to this heading">¶</a></h1>
+<section id="create-a-publishing-company">
+<h2>Create a publishing company<a class="headerlink" href="#create-a-publishing-company" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Open the home page and choose <strong>Create an account</strong>.</p></li>
+<li><p>Register as <strong>Editor</strong> with your own email and strong password.</p></li>
+<li><p>In <strong>My publishers</strong>, choose <strong>Create publisher</strong> and save the company profile.
+The creator becomes its first editor automatically.</p></li>
+<li><p>Have a colleague register as <strong>Journalist</strong> using their own account.</p></li>
+<li><p>Open the company and use <strong>Add an employee</strong> with that exact username.</p></li>
+</ol>
+<p>Editors can edit their company’s profile and remove employees. The last active
+editor is protected from removal. Employees cannot manage unrelated companies.</p>
+</section>
+<section id="write-and-approve">
+<h2>Write and approve<a class="headerlink" href="#write-and-approve" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Sign in as the journalist, open <strong>Newsroom</strong>, then <strong>Write article</strong>.</p></li>
+<li><p>Enter a title and content, select the employer, and save the draft.</p></li>
+<li><p>Sign in as an assigned editor, open the story and select <strong>Approve / retry
+delivery</strong>. Authors cannot approve their own stories.</p></li>
+<li><p>The approved article appears in <strong>Latest news</strong>. Readers cannot see drafts.</p></li>
+<li><p>Editing an article creates a new revision and requires approval again.</p></li>
+</ol>
+<p>Use separate browser profiles or log out between roles. These are real accounts
+you register locally; the installation does not seed mock users.</p>
+</section>
+<section id="subscriptions-and-newsletters">
+<h2>Subscriptions and newsletters<a class="headerlink" href="#subscriptions-and-newsletters" title="Link to this heading">¶</a></h2>
+<p>Readers register with the <strong>Reader</strong> role, then open <strong>Subscriptions</strong> to follow
+publishers and journalists. <strong>My subscriptions</strong> filters their approved feed.
+Editors and journalists can use <strong>Newsletters</strong>, curate approved articles and
+send the newsletter to subscribers. Console email is visible in terminal logs.</p>
+</section>
+<section id="approval-delivery">
+<h2>Approval delivery<a class="headerlink" href="#approval-delivery" title="Link to this heading">¶</a></h2>
+<p>Approval creates a durable revision snapshot and email recipient records before
+network calls. Delivery then emails readers and uses Requests to POST the event
+to /api/approved/. Retrying skips deliveries already marked successful. Network
+ambiguity can still cause duplicate remote acceptance; exactly-once delivery is
+not guaranteed. Use <strong>Approve / retry delivery</strong> after resolving a connection
+problem. Check pending emails and API status displayed by the application.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">The Dispatch - News Application</a></h1>
+
+
+
+<p class="blurb">Publishing, editorial review and subscriptions</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Project guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">User walkthrough</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#create-a-publishing-company">Create a publishing company</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#write-and-approve">Write and approve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subscriptions-and-newsletters">Subscriptions and newsletters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#approval-delivery">Approval delivery</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">Python and HTTP reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">Development and verification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submission.html">Submission checklist</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="reference.html" title="next chapter">Python and HTTP reference</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, News Application Contributors.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
