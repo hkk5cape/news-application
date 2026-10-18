@@ -1,3 +1,5 @@
+"""Web workflows for publishing companies, editorial review, and readers."""
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -20,6 +22,7 @@ from .services import approve_article, dispatch_approval, send_newsletter
 
 
 def home(request):
+    """Render approved reporting or the signed-in reader's subscription feed."""
     articles = Article.objects.filter(approved=True).select_related(
         "author", "publisher"
     )
@@ -33,6 +36,7 @@ def home(request):
 
 
 def register(request):
+    """Register an account and redirect according to its selected role."""
     form = RegistrationForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
@@ -67,6 +71,7 @@ def article_detail(request, pk):
 
 @login_required
 def workspace(request):
+    """Show only drafts and stories the editor or journalist can manage."""
     if is_editor(request.user):
         articles = Article.objects.filter(
             Q(publisher=None) | Q(publisher__editors=request.user)
@@ -88,6 +93,7 @@ def workspace(request):
 
 @login_required
 def article_edit(request, pk=None):
+    """Validate an authorised draft update and reset its approval status."""
     article = get_object_or_404(Article, pk=pk) if pk else None
     if article:
         if not can_edit(request.user, article) or not request.user.has_perm(
@@ -135,6 +141,7 @@ def article_delete(request, pk):
 @login_required
 @require_POST
 def article_approve(request, pk):
+    """Approve an authorised story and attempt unfinished deliveries."""
     get_object_or_404(Article, pk=pk)
     if not request.user.has_perm("news.approve_article"):
         raise PermissionDenied
@@ -259,6 +266,7 @@ def publishers(request):
 
 @login_required
 def publisher_edit(request, pk=None):
+    """Create or update a company and retain the creator as an editor."""
     if request.user.role != "editor":
         raise PermissionDenied
     company = get_object_or_404(Publisher, pk=pk) if pk else None
@@ -287,6 +295,7 @@ def publisher_edit(request, pk=None):
 
 @login_required
 def publisher_detail(request, pk):
+    """Show a company and let its editors add registered employees."""
     company = get_object_or_404(Publisher, pk=pk)
     manager = (
         request.user.role == "editor"
@@ -320,6 +329,7 @@ def publisher_detail(request, pk):
 @login_required
 @require_POST
 def employee_remove(request, pk, user_pk):
+    """Remove company membership while preserving the last active editor."""
     with transaction.atomic():
         company = get_object_or_404(Publisher.objects.select_for_update(), pk=pk)
         if (

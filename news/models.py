@@ -1,10 +1,14 @@
+"""Database models for publishing, subscriptions, and retryable deliveries."""
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
 class User(AbstractUser):
+    """An account with a publishing role and reader-only subscriptions."""
     class Role(models.TextChoices):
+        """Available account roles selected during registration."""
         READER = "reader", "Reader"
         EDITOR = "editor", "Editor"
         JOURNALIST = "journalist", "Journalist"
@@ -24,6 +28,7 @@ class User(AbstractUser):
 
     @property
     def reader_subscriptions(self):
+        """Return publisher and journalist querysets for readers, otherwise None."""
         if self.role != self.Role.READER:
             return None
         return {
@@ -33,6 +38,7 @@ class User(AbstractUser):
 
     @property
     def independent_articles(self):
+        """Return a journalist's articles without a publisher, or None."""
         return (
             self.authored_articles.filter(publisher=None)
             if self.role == self.Role.JOURNALIST
@@ -41,6 +47,7 @@ class User(AbstractUser):
 
     @property
     def independent_newsletters(self):
+        """Return a journalist's independent newsletters, or None."""
         return (
             self.authored_newsletters.filter(publisher=None)
             if self.role == self.Role.JOURNALIST
@@ -49,6 +56,7 @@ class User(AbstractUser):
 
 
 class Publisher(models.Model):
+    """A publishing company with assigned editors and journalists."""
     name = models.CharField(max_length=150, unique=True)
     description = models.TextField()
     editors = models.ManyToManyField(
@@ -69,6 +77,7 @@ class Publisher(models.Model):
 
 
 class Article(models.Model):
+    """A revision-controlled story that remains private until approved."""
     title = models.CharField(max_length=200)
     content = models.TextField()
     author = models.ForeignKey(
@@ -103,6 +112,7 @@ class Article(models.Model):
 
 
 class Newsletter(models.Model):
+    """An authored collection of approved articles for subscribers."""
     title = models.CharField(max_length=200)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -129,6 +139,7 @@ class Newsletter(models.Model):
 
 
 class ApprovalEvent(models.Model):
+    """Store one approval snapshot per article revision for delivery retries."""
     article = models.ForeignKey(Article, null=True, on_delete=models.SET_NULL)
     article_id_snapshot = models.PositiveBigIntegerField()
     revision = models.PositiveIntegerField()
@@ -148,6 +159,7 @@ class ApprovalEvent(models.Model):
 
 
 class ArticleEmail(models.Model):
+    """Track whether one reader received an article approval email."""
     event = models.ForeignKey(
         ApprovalEvent, on_delete=models.CASCADE, related_name="deliveries"
     )
@@ -165,12 +177,14 @@ class ArticleEmail(models.Model):
 
 
 class ApprovedLog(models.Model):
+    """Record an authenticated approval event received by the API."""
     event = models.OneToOneField(ApprovalEvent, on_delete=models.PROTECT)
     payload = models.JSONField()
     received_at = models.DateTimeField(auto_now_add=True)
 
 
 class NewsletterEmail(models.Model):
+    """Track delivery of a newsletter revision to an individual reader."""
     newsletter = models.ForeignKey(Newsletter, on_delete=models.CASCADE)
     revision = models.PositiveIntegerField()
     reader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)

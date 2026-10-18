@@ -1,3 +1,5 @@
+"""Validated forms for registration, publishing, and company membership."""
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import Article, Newsletter, Publisher, User
@@ -5,6 +7,7 @@ from .policies import is_editor
 
 
 class RegistrationForm(UserCreationForm):
+    """Register an account with a selected role and a unique email address."""
     role = forms.ChoiceField(
         choices=User.Role.choices,
         help_text="Editors create and manage publishing companies. Journalists write articles. Readers follow news.",
@@ -15,6 +18,7 @@ class RegistrationForm(UserCreationForm):
         fields = ["username", "email", "role"]
 
     def clean_email(self):
+        """Normalise the email address and reject case-insensitive duplicates."""
         email = self.cleaned_data["email"].lower()
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("This email is already registered.")
@@ -22,6 +26,7 @@ class RegistrationForm(UserCreationForm):
 
 
 class ArticleForm(forms.ModelForm):
+    """Limit publisher choices to companies associated with the current user."""
     class Meta:
         model = Article
         fields = ["title", "content", "publisher"]
@@ -36,6 +41,7 @@ class ArticleForm(forms.ModelForm):
 
 
 class NewsletterForm(forms.ModelForm):
+    """Offer approved articles and publishers available to the current user."""
     class Meta:
         model = Newsletter
         fields = ["title", "description", "publisher", "articles"]
@@ -51,6 +57,7 @@ class NewsletterForm(forms.ModelForm):
 
 
 class SubscriptionForm(forms.ModelForm):
+    """Let a reader select publishers and active journalist accounts."""
     class Meta:
         model = User
         fields = ["subscribed_publishers", "subscribed_journalists"]
@@ -63,18 +70,21 @@ class SubscriptionForm(forms.ModelForm):
 
 
 class PublisherForm(forms.ModelForm):
+    """Validate the editable name and description of a publishing company."""
     class Meta:
         model = Publisher
         fields = ["name", "description"]
 
 
 class EmployeeForm(forms.Form):
+    """Resolve an existing active editor or journalist by exact username."""
     username = forms.CharField(
         max_length=150,
         help_text="Enter the exact username of an existing editor or journalist account.",
     )
 
     def clean_username(self):
+        """Resolve the employee or raise a field validation error."""
         username = self.cleaned_data["username"].strip()
         try:
             self.employee = User.objects.get(
