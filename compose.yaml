@@ -4,15 +4,16 @@ services:
     environment:
       MARIADB_DATABASE: news_app
       MARIADB_USER: news_user
-      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set a root password in .env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Run python scripts/configure.py --docker first}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Generate a local root password in .env}
     volumes:
       - news_db:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
+      start_period: 20s
   web:
     build: .
     env_file: .env
@@ -27,6 +28,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000 --noreload"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 30s
 volumes:
   news_db:
