@@ -98,7 +98,7 @@ Journalists can create articles. Editors can approve articles and manage newslet
 
 
 
-Open **docs/\_build/html/index.html** directly in a browser. The generated HTML is
+Open docs/\_build/html/index.html  directly in a browser. The generated HTML is
 included in Git as specifically required by this assignment. Source guides and
 Django-aware autodoc configuration are in `docs/`.
 
