@@ -12,6 +12,7 @@ environment route (sections 2-4) or Docker (section 5-10).
 
 ---
 Option A – Manual Installation (Python + MariaDB)
+
 2. Virtual Environment and Dependencies
 This route needs Python 3.12 and a running MariaDB server.
 Windows PowerShell
