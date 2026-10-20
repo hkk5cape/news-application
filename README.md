@@ -132,8 +132,6 @@ user access to the separate `test\\\_news\\\_app` database before running the su
 ```sql
 GRANT ALL PRIVILEGES ON test\\\_news\\\_app.\\\* TO 'news\\\_user'@'localhost';
 
-\---
-
 ## 5\. API and Project Layout
 
 ``
