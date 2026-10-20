@@ -108,9 +108,6 @@ To rebuild from the project root in an activated environment:
 python -m pip install -r requirements-docs.txt
 python -m sphinx -W --keep-going -b html -d docs/.doctrees docs docs/\\\_build/html
 ```
-Autodoc initialises `news\\\_project.settings` using SQLite for inspection. No
-MariaDB connection or application accounts are needed to generate documentation.
----
 4\. Run Tests
 Windows PowerShell
 ```powershell
