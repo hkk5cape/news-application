@@ -88,13 +88,13 @@ docker compose logs --tail 100 db web```
 
 \---
 
-## 2\. Write, Review, Subscribe and Send Newsletters
+2. Write, Review, Subscribe and Send Newsletters
 
 Journalists can create articles. Editors can approve articles and manage newsletters. Readers can subscribe to publishers and journalists.
 
 \---
 
-## 3\. Sphinx Documentation
+3. Sphinx Documentation
 
 Open **docs/\_build/html/index.html **
 
@@ -108,7 +108,7 @@ To rebuild from the project root in an activated environment:
 python -m pip install -r requirements-docs.txt
 python -m sphinx -W --keep-going -b html -d docs/.doctrees docs docs/\\\_build/html
 ```
-4\. Run Tests
+4. Run Tests
 Windows PowerShell
 ```powershell
 python -m pip install -r requirements-test.txt
@@ -129,7 +129,7 @@ user access to the separate `test\\\_news\\\_app` database before running the su
 ```sql
 GRANT ALL PRIVILEGES ON test\\\_news\\\_app.\\\* TO 'news\\\_user'@'localhost';
 
-## 5\. API and Project Layout
+5. API and Project Layout
 
 ``
 
@@ -153,7 +153,7 @@ SUBMISSION\\\_STEPS.md`, `capstone.txt`	         Publication and course submissi
 
 
 ---
-6\. Consolidated Git History
+6. Consolidated Git History
 ``
 The original history is retained. The `docs` branch has separate documentation
 commits for models, policies, forms, services and views plus the Sphinx build.
